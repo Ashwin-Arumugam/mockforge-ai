@@ -1,0 +1,170 @@
+openapi: 3.0.3
+info:
+  title: Universal AI Platform & LLM Microservice Gateway
+  version: 2.0.0
+  description: Universal OpenAPI spec demonstrating LLM Chat Completions, Embeddings, AI Agent Tasks, User Management, and Document Vector Stores.
+paths:
+  /v1/chat/completions:
+    post:
+      summary: LLM Chat Completion Endpoint
+      operationId: createChatCompletion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+      responses:
+        '200':
+          description: Chat Completion Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionResponse'
+  /v1/embeddings:
+    post:
+      summary: Vector Embedding Generation Endpoint
+      operationId: createEmbedding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [input]
+              properties:
+                input: { type: string }
+                model: { type: string, default: text-embedding-3-small }
+      responses:
+        '200':
+          description: Vector Embeddings
+  /v1/agents/execute:
+    post:
+      summary: Execute Autonomous AI Agent Task
+      operationId: executeAgentTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentTaskRequest'
+      responses:
+        '200':
+          description: Agent Task Result
+  /users:
+    post:
+      summary: Register Developer User
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '201':
+          description: Developer User Created
+    get:
+      summary: List All Users
+      operationId: listUsers
+      responses:
+        '200':
+          description: List of Users
+  /users/{id}:
+    get:
+      summary: Get User Details by ID
+      operationId: getUserById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: User Found
+  /documents:
+    post:
+      summary: Index Document into Vector Store
+      operationId: createDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Document'
+      responses:
+        '201':
+          description: Document Indexed
+  /users/{userId}/documents:
+    get:
+      summary: Get Documents Owned by User
+      operationId: getUserDocuments
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of User Documents
+components:
+  schemas:
+    ChatCompletionRequest:
+      type: object
+      required: [messages]
+      properties:
+        model: { type: string, default: gpt-4o-mini }
+        messages:
+          type: array
+          items:
+            type: object
+            required: [role, content]
+            properties:
+              role: { type: string, enum: [system, user, assistant] }
+              content: { type: string }
+        temperature: { type: number, default: 0.7 }
+    ChatCompletionResponse:
+      type: object
+      properties:
+        id: { type: string }
+        object: { type: string, default: chat.completion }
+        created: { type: integer }
+        model: { type: string }
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              message:
+                type: object
+                properties:
+                  role: { type: string, default: assistant }
+                  content: { type: string }
+    AgentTaskRequest:
+      type: object
+      required: [user_id, prompt]
+      properties:
+        id: { type: string }
+        user_id: { type: string }
+        prompt: { type: string }
+        agent_type: { type: string, enum: [coder, researcher, critic], default: coder }
+        status:
+          type: string
+          enum: [QUEUED, RUNNING, COMPLETED, FAILED]
+          default: COMPLETED
+    User:
+      type: object
+      required: [name, email]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string }
+        api_quota: { type: integer, default: 10000 }
+    Document:
+      type: object
+      required: [user_id, title, content]
+      properties:
+        id: { type: string }
+        user_id: { type: string }
+        title: { type: string }
+        content: { type: string }
