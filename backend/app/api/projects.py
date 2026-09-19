@@ -21,6 +21,7 @@ class ProjectOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+@router.post("", response_model=ProjectOut)
 @router.post("/", response_model=ProjectOut)
 def create_project(payload: ProjectCreate, db: Session = Depends(get_db)):
     project = Project(name=payload.name, description=payload.description)
@@ -34,6 +35,7 @@ def create_project(payload: ProjectCreate, db: Session = Depends(get_db)):
         created_at=project.created_at.isoformat()
     )
 
+@router.get("", response_model=List[ProjectOut])
 @router.get("/", response_model=List[ProjectOut])
 def list_projects(db: Session = Depends(get_db)):
     projects = db.query(Project).all()

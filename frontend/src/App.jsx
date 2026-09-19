@@ -6,6 +6,7 @@ import LiveEndpointTester from './components/LiveEndpointTester';
 import ChaosPanel from './components/ChaosPanel';
 import ScenarioRunner from './components/ScenarioRunner';
 import AISettingsModal from './components/AISettingsModal';
+import NewProjectModal from './components/NewProjectModal';
 
 export default function App() {
   const [projects, setProjects] = useState([]);
@@ -13,6 +14,7 @@ export default function App() {
   const [activeSpec, setActiveSpec] = useState(null);
   const [healthStatus, setHealthStatus] = useState('connecting');
   const [isAISettingsOpen, setIsAISettingsOpen] = useState(false);
+  const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [aiSettings, setAiSettings] = useState({
     provider: 'auto',
     apiKey: '',
@@ -33,12 +35,31 @@ export default function App() {
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch('/api/v1/projects/');
+      let res = await fetch('/api/v1/projects');
+      if (!res.ok) {
+        res = await fetch('/api/v1/projects/');
+      }
       if (res.ok) {
-        const data = await res.json();
+        let data = await res.json();
+        if (data.length === 0) {
+          // Auto-initialize a default project so the user is never blocked
+          try {
+            const createRes = await fetch('/api/v1/projects', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: 'Default Project', description: 'Stateful Mock Project' })
+            });
+            if (createRes.ok) {
+              const defaultProj = await createRes.json();
+              data = [defaultProj];
+            }
+          } catch (e) {
+            console.error('Failed to auto-create default project', e);
+          }
+        }
         setProjects(data);
-        if (data.length > 0 && !activeProjectId) {
-          setActiveProjectId(data[0].id);
+        if (data.length > 0) {
+          setActiveProjectId(prev => (prev && data.some(p => p.id === prev)) ? prev : data[0].id);
         }
       }
     } catch (err) {
@@ -72,20 +93,25 @@ export default function App() {
     }
   }, [activeProjectId]);
 
-  const handleCreateProject = async () => {
-    const name = prompt('Enter Project Name:', `Project ${projects.length + 1}`);
-    if (!name) return;
-
+  const handleCreateProject = async (name, description = '') => {
     try {
-      const res = await fetch('/api/v1/projects/', {
+      let res = await fetch('/api/v1/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description: 'Stateful Mock Project' })
+        body: JSON.stringify({ name, description: description || 'Stateful Mock Project' })
       });
+      if (!res.ok) {
+        res = await fetch('/api/v1/projects/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description: description || 'Stateful Mock Project' })
+        });
+      }
       if (res.ok) {
         const newProj = await res.json();
-        setProjects([...projects, newProj]);
+        setProjects(prev => [...prev, newProj]);
         setActiveProjectId(newProj.id);
+        return newProj;
       }
     } catch (err) {
       console.error('Failed to create project', err);
@@ -98,7 +124,7 @@ export default function App() {
         projects={projects}
         activeProjectId={activeProjectId}
         onSelectProject={setActiveProjectId}
-        onCreateProject={handleCreateProject}
+        onCreateProject={() => setIsNewProjectModalOpen(true)}
         onOpenAISettings={() => setIsAISettingsOpen(true)}
         healthStatus={healthStatus}
       />
@@ -130,6 +156,12 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      <NewProjectModal
+        isOpen={isNewProjectModalOpen}
+        onClose={() => setIsNewProjectModalOpen(false)}
+        onCreate={handleCreateProject}
+      />
 
       <AISettingsModal
         isOpen={isAISettingsOpen}

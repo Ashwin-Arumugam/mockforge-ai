@@ -1,12 +1,12 @@
 {
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://mockforge-backend.onrender.com/api/:path*"
+      "source": "/api/(.*)",
+      "destination": "https://mockforge-backend.onrender.com/api/$1"
     },
     {
-      "source": "/mock/:path*",
-      "destination": "https://mockforge-backend.onrender.com/mock/:path*"
+      "source": "/mock/(.*)",
+      "destination": "https://mockforge-backend.onrender.com/mock/$1"
     },
     {
       "source": "/health",
